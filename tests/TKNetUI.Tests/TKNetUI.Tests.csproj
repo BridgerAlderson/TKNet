@@ -19,6 +19,6 @@
     <Compile Include="../../TKNetUI/EngineCache.cs" Link="EngineCache.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.2" />
   </ItemGroup>
 </Project>
