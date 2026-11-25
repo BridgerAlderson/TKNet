@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="../../netutil/testdata/scopes.json" Link="scopes.json" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="../../TKNetUI/ScopeParser.cs" Link="ScopeParser.cs" />
+    <Compile Include="../../TKNetUI/EngineClient.cs" Link="EngineClient.cs" />
+    <Compile Include="../../TKNetUI/Results.cs" Link="Results.cs" />
+    <Compile Include="../../TKNetUI/ResultSort.cs" Link="ResultSort.cs" />
+    <Compile Include="../../TKNetUI/ResultCollection.cs" Link="ResultCollection.cs" />
+    <Compile Include="../../TKNetUI/ExportSupport.cs" Link="ExportSupport.cs" />
+    <Compile Include="../../TKNetUI/ShareLinks.cs" Link="ShareLinks.cs" />
+    <Compile Include="../../TKNetUI/DolphinSmbLauncher.cs" Link="DolphinSmbLauncher.cs" />
+    <Compile Include="../../TKNetUI/BoundedLog.cs" Link="BoundedLog.cs" />
+    <Compile Include="../../TKNetUI/EngineCache.cs" Link="EngineCache.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+  </ItemGroup>
+</Project>

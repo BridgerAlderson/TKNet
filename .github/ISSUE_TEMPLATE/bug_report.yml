@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible problem in TKNet.
+body:
+  - type: markdown
+    attributes:
+      value: Please remove credentials and private network details. For vulnerabilities, see SECURITY.md.
+  - type: input
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Commit or release, OS version, and desktop/file manager when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps and expected behavior
+      description: Describe the smallest example that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Add redacted error text or a screenshot. Use documentation IPs when possible.
+    validations:
+      required: true

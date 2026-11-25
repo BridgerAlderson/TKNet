@@ -1,0 +1,13 @@
+<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TKNetUI.App" RequestedThemeVariant="Dark">
+    <Application.Resources>
+        <Color x:Key="SystemAccentColor">#79C6DB</Color>
+        <Color x:Key="SystemAccentColorLight1">#A5E3EF</Color>
+        <Color x:Key="SystemAccentColorDark1">#3D8094</Color>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude Source="/Styles/Workspace.axaml"/>
+    </Application.Styles>
+</Application>

@@ -1,0 +1,232 @@
+[
+  {
+    "name": "last octet range",
+    "input": "192.0.2.1-3",
+    "count": 3,
+    "first": "192.0.2.1",
+    "last": "192.0.2.3",
+    "valid": true
+  },
+  {
+    "name": "CIDR host bits",
+    "input": "192.0.2.9/30",
+    "count": 2,
+    "first": "192.0.2.9",
+    "last": "192.0.2.10",
+    "valid": true
+  },
+  {
+    "name": "point to point",
+    "input": "192.0.2.0/31",
+    "count": 2,
+    "first": "192.0.2.0",
+    "last": "192.0.2.1",
+    "valid": true
+  },
+  {
+    "name": "upper point to point",
+    "input": "255.255.255.254/31",
+    "count": 2,
+    "first": "255.255.255.254",
+    "last": "255.255.255.255",
+    "valid": true
+  },
+  {
+    "name": "upper full range",
+    "input": "255.255.255.254-255.255.255.255",
+    "count": 2,
+    "first": "255.255.255.254",
+    "last": "255.255.255.255",
+    "valid": true
+  },
+  {
+    "name": "overlap and comments",
+    "input": "192.0.2.1-3,192.0.2.2\n# comment\n192.0.2.0/30",
+    "count": 3,
+    "first": "192.0.2.1",
+    "last": "192.0.2.3",
+    "valid": true
+  },
+  {
+    "name": "single host",
+    "input": "192.0.2.1/32",
+    "count": 1,
+    "first": "192.0.2.1",
+    "last": "192.0.2.1",
+    "valid": true
+  },
+  {
+    "name": "old range boundary",
+    "input": "10.0.0.0-10.0.255.255",
+    "count": 65536,
+    "first": "10.0.0.0",
+    "last": "10.0.255.255",
+    "valid": true
+  },
+  {
+    "name": "past old boundary",
+    "input": "10.0.0.0-10.1.0.0",
+    "count": 65537,
+    "first": "10.0.0.0",
+    "last": "10.1.0.0",
+    "valid": true
+  },
+  {
+    "name": "past aggregate boundary",
+    "input": "10.0.0.0-10.0.255.255,10.1.0.1",
+    "count": 65537,
+    "first": "10.0.0.0",
+    "last": "10.1.0.1",
+    "valid": true
+  },
+  {
+    "name": "mixed large CIDRs",
+    "input": "192.168.0.0/16\n10.20.0.0/16\n10.21.40.1/22\n10.22.100.0/24\n10.22.101.0/24\n10.22.102.0/24\n10.22.103.0/24\n10.22.104.0/24\n10.22.105.0/24\n10.22.106.0/24\n10.22.107.0/24\n10.22.108.0/24\n10.22.109.0/24\n10.22.110.0/24",
+    "count": 134884,
+    "first": "10.20.0.1",
+    "last": "192.168.255.254",
+    "valid": true
+  },
+  {
+    "name": "single large CIDR",
+    "input": "10.0.0.0/15",
+    "count": 131070,
+    "first": "10.0.0.1",
+    "last": "10.1.255.254",
+    "valid": true
+  },
+  {
+    "name": "class A",
+    "input": "10.42.7.1/8",
+    "count": 16777214,
+    "first": "10.0.0.1",
+    "last": "10.255.255.254",
+    "valid": true
+  },
+  {
+    "name": "full IPv4 CIDR",
+    "input": "0.0.0.0/0",
+    "count": 4294967294,
+    "first": "0.0.0.1",
+    "last": "255.255.255.254",
+    "valid": true
+  },
+  {
+    "name": "full IPv4 range",
+    "input": "0.0.0.0-255.255.255.255",
+    "count": 4294967296,
+    "first": "0.0.0.0",
+    "last": "255.255.255.255",
+    "valid": true
+  },
+  {
+    "name": "CIDR with explicit endpoints",
+    "input": "0.0.0.0/0,255.255.255.255,0.0.0.0",
+    "count": 4294967296,
+    "first": "0.0.0.0",
+    "last": "255.255.255.255",
+    "valid": true
+  },
+  {
+    "name": "nested unsorted scopes",
+    "input": "10.0.0.128/25,10.0.0.0/24,10.0.0.1-254,10.0.0.128",
+    "count": 254,
+    "first": "10.0.0.1",
+    "last": "10.0.0.254",
+    "valid": true
+  },
+  {
+    "name": "adjacent CIDRs keep boundaries",
+    "input": "192.0.2.0/30,192.0.2.4/30",
+    "count": 4,
+    "first": "192.0.2.1",
+    "last": "192.0.2.6",
+    "valid": true
+  },
+  {
+    "name": "duplicates at maximum",
+    "input": "255.255.255.255,255.255.255.255/32",
+    "count": 1,
+    "first": "255.255.255.255",
+    "last": "255.255.255.255",
+    "valid": true
+  },
+  {
+    "name": "empty",
+    "input": "# comment\n",
+    "count": 0,
+    "first": "",
+    "last": "",
+    "valid": true
+  },
+  {
+    "name": "invalid 192.0.2.4-1",
+    "input": "192.0.2.4-1",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.1-256",
+    "input": "192.0.2.1-256",
+    "valid": false
+  },
+  {
+    "name": "invalid ::1",
+    "input": "::1",
+    "valid": false
+  },
+  {
+    "name": "invalid ::ffff:192.0.2.1/120",
+    "input": "::ffff:192.0.2.1/120",
+    "valid": false
+  },
+  {
+    "name": "invalid bad",
+    "input": "bad",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.000.2.1",
+    "input": "192.000.2.1",
+    "valid": false
+  },
+  {
+    "name": "invalid 127.1",
+    "input": "127.1",
+    "valid": false
+  },
+  {
+    "name": "invalid 1234",
+    "input": "1234",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.1/33",
+    "input": "192.0.2.1/33",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.1/-1",
+    "input": "192.0.2.1/-1",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.0--0",
+    "input": "192.0.2.0--0",
+    "valid": false
+  },
+  {
+    "name": "invalid 10.0.0.0/8\nbad",
+    "input": "10.0.0.0/8\nbad",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.0/24,192.0.2.1-2-3",
+    "input": "192.0.2.0/24,192.0.2.1-2-3",
+    "valid": false
+  },
+  {
+    "name": "invalid 192.0.2.1/24/8",
+    "input": "192.0.2.1/24/8",
+    "valid": false
+  }
+]

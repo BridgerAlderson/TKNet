@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/sonar-uygulama.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TkNetEngineName Condition="'$(RuntimeIdentifier)' == 'linux-x64'">tknet-engine</TkNetEngineName>
+    <TkNetEngineName Condition="'$(RuntimeIdentifier)' == 'win-x64'">tknet-engine.exe</TkNetEngineName>
+  </PropertyGroup>
+  <Target Name="ValidateTkNetEngine" BeforeTargets="PrepareForBuild" Condition="'$(TkNetEnginePath)' != ''">
+    <Error Condition="'$(TkNetEngineName)' == ''" Text="TkNetEnginePath requires linux-x64 or win-x64." />
+    <Error Condition="!Exists('$(TkNetEnginePath)')" Text="The staged TKNet engine does not exist: $(TkNetEnginePath)" />
+  </Target>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <Content Include="..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\THIRD_PARTY_NOTICES.txt" Link="THIRD_PARTY_NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Packaging uses the freshly built target engine; IDE builds can use local resources. -->
+    <EmbeddedResource Include="Resources\**" Condition="'$(TkNetEnginePath)' == ''" />
+    <EmbeddedResource Include="$(TkNetEnginePath)" LogicalName="TKNetUI.Resources.$(TkNetEngineName)"
+                      Condition="'$(TkNetEnginePath)' != ''" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.1" />
+    <!-- Security backport for GHSA-xrw6-gwf8-vvr9 in Avalonia.FreeDesktop's transitive dependency. -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

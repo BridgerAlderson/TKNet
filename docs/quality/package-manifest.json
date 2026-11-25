@@ -1,0 +1,165 @@
+{
+  "builtAt": "2026-11-24",
+  "installedAt": "2026-11-25",
+  "change": "Verified Dolphin delivery, explicit SMB access outcomes and credential source, optional post-session hostname lookup, supported desktop runtime and patched engines",
+  "toolchain": "go1.27.4",
+  "dotnetSDK": "10.0.404",
+  "dotnetRuntime": "10.0.15",
+  "icon": {
+    "file": "TKNetUI/Assets/sonar-uygulama.ico",
+    "sha256": "f6cbb6da86d58a192fb5054e171d3bc883bfec5a97b37895bb593f13f4013d50"
+  },
+  "packages": [
+    {
+      "file": "release-linux/TKNetUI",
+      "size": 90443864,
+      "sha256": "555e8d08ff652a4d53597ec39c0360fc5c94bce3ba53f1c71d49ff1a8dc72985",
+      "buildMethod": "build.sh",
+      "embeddedEngineVerifiedByteForByte": true,
+      "embeddedEngineCount": 1,
+      "embeddedEngines": [
+        {
+          "name": "tknet-engine",
+          "sha256": "789725da7e62637d910ed4ef7281c38fa74be3dd6e375eaf55bdf365b220ae1e"
+        }
+      ],
+      "embeddedUI": {
+        "sha256": "f5ed5267d63ce68e1624a8b98d00ef5b05b2b5510723b7ea175a9f278d1edffb",
+        "applicationPdb": false
+      },
+      "embeddedDBus": {
+        "version": "0.21.3",
+        "sha256": "feb2ec8ded9c8c786eaaf91623bdb58f32a9b552497c02e6828b177140a3b118"
+      },
+      "files": [
+        {
+          "file": "LICENSE",
+          "size": 1075,
+          "sha256": "57c5f27108a36884ea6879e487d3055940e1e2c872cd9f5f0cf27f2fbf3e0428"
+        },
+        {
+          "file": "THIRD_PARTY_NOTICES.txt",
+          "size": 357311,
+          "sha256": "2fca7295a97d887bd17e1bf0450357897e070b1ad75ee289a9980f0aa48d6ba2"
+        },
+        {
+          "file": "TKNetUI",
+          "size": 90443864,
+          "sha256": "555e8d08ff652a4d53597ec39c0360fc5c94bce3ba53f1c71d49ff1a8dc72985"
+        },
+        {
+          "file": "libHarfBuzzSharp.so",
+          "size": 2119208,
+          "sha256": "95fad4b704332ff1a9d7e137ab5d1849b8711099be61fd5d264afe0562b306a2"
+        },
+        {
+          "file": "libSkiaSharp.so",
+          "size": 9244960,
+          "sha256": "a009dee86e037173654eb19b91365e7d545814b7f632240049596c04342fcf02"
+        }
+      ],
+      "bundleEntries": 200
+    },
+    {
+      "file": "release/TKNetUI.exe",
+      "size": 90599508,
+      "sha256": "56e11a464cc1f711433af1817f3896e1ea417ec3ebe01e9255595c396a5b8c6c",
+      "buildMethod": "Linux cross-publish with the build.bat engine flags (-H=windowsgui)",
+      "embeddedEngineVerifiedByteForByte": true,
+      "embeddedEngineCount": 1,
+      "embeddedEngines": [
+        {
+          "name": "tknet-engine.exe",
+          "sha256": "6422cfb04ba937c62986a9a8ba7d8c3cf1d4545fbf6eb6dc0789f478fff4df25"
+        }
+      ],
+      "embeddedUI": {
+        "sha256": "5c508427bf6667d5ae27aac271be758a706bc78d274b5d302eb5e2a9dd0d4d1f",
+        "applicationPdb": false
+      },
+      "embeddedDBus": {
+        "version": "0.21.3",
+        "sha256": "feb2ec8ded9c8c786eaaf91623bdb58f32a9b552497c02e6828b177140a3b118"
+      },
+      "files": [
+        {
+          "file": "LICENSE",
+          "size": 1075,
+          "sha256": "57c5f27108a36884ea6879e487d3055940e1e2c872cd9f5f0cf27f2fbf3e0428"
+        },
+        {
+          "file": "THIRD_PARTY_NOTICES.txt",
+          "size": 357311,
+          "sha256": "2fca7295a97d887bd17e1bf0450357897e070b1ad75ee289a9980f0aa48d6ba2"
+        },
+        {
+          "file": "TKNetUI.exe",
+          "size": 90599508,
+          "sha256": "56e11a464cc1f711433af1817f3896e1ea417ec3ebe01e9255595c396a5b8c6c"
+        },
+        {
+          "file": "av_libglesv2.dll",
+          "size": 4440576,
+          "sha256": "caff1be1faee32f7c5bfba9162ee617c347aad40772caa9a1aff794e3a191420"
+        },
+        {
+          "file": "libHarfBuzzSharp.dll",
+          "size": 1607216,
+          "sha256": "ef5923ef4cdc8612c1825b294174b5b8cc8a056ed0f06b58db56aabc56aaae12"
+        },
+        {
+          "file": "libSkiaSharp.dll",
+          "size": 9414184,
+          "sha256": "2ca940b7c4621ecd27d2f07c5f46fafa0375f493692cd4e6e1e66c07fbc8109a"
+        }
+      ],
+      "bundleEntries": 200
+    }
+  ],
+  "verification": {
+    "goRaceAndVet": true,
+    "windowsEngineVetAndTestCompilation": true,
+    "uiLogicAssertions": 446,
+    "visualAssertions": 752,
+    "scrollingAssertions": 70,
+    "syntheticScreens": 22,
+    "discoveryComparisonTests": 7,
+    "buildScriptTests": 12,
+    "loopbackSMB2": {
+      "repetitions": 3,
+      "fullResources": 134,
+      "partialResources": 39,
+      "configuredAccountLoginsPerRun": 1,
+      "temporaryFilesCleaned": true
+    },
+    "dolphin": {
+      "privateBusChecks": 11,
+      "nativeColdStartAndWindowReuse": true
+    },
+    "publishedLinuxWindowOpened": true,
+    "nativeWindowsExecution": true,
+    "windows11": {
+      "testedAt": "2026-11-25",
+      "osBuild": 26200,
+      "architecture": "x64",
+      "passedGroups": 6,
+      "publishedDesktopOpenedAndClosed": true,
+      "embeddedEngineLoopbackOpenAndRefused": true,
+      "syntheticSmbScenarios": 8,
+      "offlineUiAssertions": 751,
+      "scrollingAssertionsIncluded": 70,
+      "confirmedIpTxtAndJsonVerified": true,
+      "realSmbShareAndExplorerTested": false
+    },
+    "remoteGitHubActionsRun": false,
+    "dependencyAudit": {
+      "goDatabaseModified": "2026-11-23T20:05:14Z",
+      "goSourceFindings": 0,
+      "goEngineBinaryFindings": {
+        "linux": 0,
+        "windows": 0
+      },
+      "nugetReportedVulnerabilities": 0
+    }
+  }
+}

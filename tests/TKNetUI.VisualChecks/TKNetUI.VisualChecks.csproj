@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Keep existing avares://TKNetUI resource URIs valid in the isolated harness. -->
+    <AssemblyName>TKNetUI</AssemblyName>
+    <StartupObject>TKNetUI.VisualChecks.PreviewProgram</StartupObject>
+    <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../TKNetUI/*.cs" Exclude="../../TKNetUI/Program.cs" Link="AppSource/%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="../../TKNetUI/*.axaml" Link="%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="../../TKNetUI/Styles/**/*.axaml" Link="Styles/%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="../../TKNetUI/Assets/**" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Headless" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Skia" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+  </ItemGroup>
+</Project>

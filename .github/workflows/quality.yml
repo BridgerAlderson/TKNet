@@ -1,0 +1,100 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - name: Install desktop build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev libxkbcommon-dev libfontconfig1 dbus
+      - name: Restore dependencies
+        run: |
+          go mod download
+          dotnet restore TKNetUI/TKNetUI.csproj
+          dotnet restore tests/TKNetUI.Tests/TKNetUI.Tests.csproj
+          dotnet restore tests/TKNetUI.VisualChecks/TKNetUI.VisualChecks.csproj
+      - name: Run quality checks
+        run: bash tools/check.sh
+      - name: Audit dependencies
+        run: |
+          go mod verify
+          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+          dotnet list TKNetUI/TKNetUI.csproj package --vulnerable --include-transitive --format json > artifacts/nuget-audit.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/nuget-audit.json').read_text())
+          assert report.get('projects'), 'NuGet returned no project audit'
+          assert not any(log.get('level', '').lower() == 'error' for log in report.get('logs', [])), 'NuGet audit failed'
+          affected = [package for project in report['projects'] for framework in project.get('frameworks', [])
+                      for kind in ('topLevelPackages', 'transitivePackages') for package in framework.get(kind, [])
+                      if package.get('vulnerabilities')]
+          assert not affected, 'NuGet reported vulnerable dependencies; review artifacts/nuget-audit.json'
+          PY
+      - name: Check Dolphin handoff with a private fake service
+        run: dotnet run --project tests/TKNetUI.Tests/TKNetUI.Tests.csproj --no-restore -- --dolphin-dbus
+      - name: Build Linux package
+        run: bash build.sh
+      - name: Keep synthetic UI previews
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-preview-linux
+          path: |
+            artifacts/ui-preview/[0-9][0-9]*-[0-9]*x[0-9]*.png
+            artifacts/ui-preview/layout-checks.json
+            artifacts/ui-preview/scroll-checks.json
+          retention-days: 14
+          if-no-files-found: warn
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - name: Test Windows engine
+        shell: cmd
+        run: |
+          go test -count=1 ./scanner ./netutil || exit /b 1
+          go test -count=1 engine_main.go engine_main_test.go || exit /b 1
+          go vet ./scanner ./netutil || exit /b 1
+      - name: Check UI logic and layout
+        shell: cmd
+        run: |
+          dotnet run --project tests/TKNetUI.Tests/TKNetUI.Tests.csproj || exit /b 1
+          dotnet run --project tests/TKNetUI.VisualChecks/TKNetUI.VisualChecks.csproj -c Release -- artifacts/ui-preview || exit /b 1
+      - name: Build through the Windows batch script
+        shell: cmd
+        run: call build.bat

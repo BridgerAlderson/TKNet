@@ -1,0 +1,362 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TKNetUI.MainWindow"
+        Width="1400" Height="900" MinWidth="900" MinHeight="550"
+        WindowStartupLocation="CenterScreen"
+        Title="TKNet — Network Scanner"
+        Icon="avares://TKNetUI/Assets/sonar-uygulama.ico"
+        Background="{StaticResource CanvasBrush}" Foreground="{StaticResource TextBrush}"
+        FontFamily="Inter, Segoe UI, sans-serif" FontSize="13"
+        KeyDown="OnWindowKeyDown" SizeChanged="OnWorkspaceSizeChanged">
+    <Grid RowDefinitions="64,*,36">
+        <!-- Stable application chrome, separate from scan actions. -->
+        <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="22,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Image Source="avares://TKNetUI/Assets/sonar-uygulama.png" Width="36" Height="36"
+                           Stretch="Uniform" AutomationProperties.Name="TKNet logo"/>
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="TKNet" FontSize="19" FontWeight="SemiBold" LetterSpacing="0.5"/>
+                        <TextBlock Text="NETWORK SCANNER" Classes="eyebrow" FontSize="8"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border x:Name="ScanStateBadge" Classes="scanstate" CornerRadius="12" Padding="10,4" BorderThickness="1" Margin="0,0,10,0">
+                        <TextBlock x:Name="ScanStateText" Text="Ready" FontSize="11"/>
+                    </Border>
+                    <Button x:Name="ScopeToggleBtn" Content="Scope" Classes="ghost active" Click="OnScopeToggleClick"
+                            ToolTip.Tip="Show or hide the target scope panel"/>
+                    <Button x:Name="SettingsBtn" Content="Settings" Classes="ghost" Click="OnSettingsClick"
+                            ToolTip.Tip="Authentication, discovery and scan settings"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Classes="workspace" ColumnDefinitions="Auto,*">
+            <!-- Target editor stretches with the window; scan settings stay within reach. -->
+            <Border x:Name="ScopePanel" Width="264" Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="7">
+                <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" Margin="16">
+                    <StackPanel Margin="0,0,0,14">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                            <TextBlock Text="Target scope" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" x:Name="ScopeCountText" Text="0 hosts" Foreground="{StaticResource AccentBrush}" FontSize="11"/>
+                        </Grid>
+                        <TextBlock Text="IPv4 addresses, ranges or CIDR. One entry per line." Classes="caption"/>
+                    </StackPanel>
+                    <TextBox Grid.Row="1" x:Name="ScopeTextBox" Classes="scope" MinHeight="70"
+                             AutomationProperties.Name="Target scope" AcceptsReturn="True" AcceptsTab="False"
+                             TextWrapping="NoWrap" VerticalAlignment="Stretch"
+                             Watermark="192.168.1.0/24&#x0a;10.0.0.1-254&#x0a;172.16.5.10&#x0a;# comments supported"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+                    <TextBlock Grid.Row="2" x:Name="ScopeErrorText" IsVisible="False" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                               Foreground="#F1BC7E" FontSize="11" Margin="0,10,0,0"/>
+                    <StackPanel Grid.Row="3" Spacing="8" Margin="0,12,0,16">
+                        <Grid ColumnDefinitions="*,8,*,8,*">
+                            <Button Content="Load…" Click="OnScopeLoadClick" HorizontalAlignment="Stretch" Padding="6,8"/>
+                            <Button Grid.Column="2" Content="Save…" Click="OnScopeSaveClick" HorizontalAlignment="Stretch" Padding="6,8"/>
+                            <Button Grid.Column="4" Content="Clear" Click="OnScopeClearClick" HorizontalAlignment="Stretch" Padding="6,8"/>
+                        </Grid>
+                        <Button Content="Detect local subnet" Click="OnScopeDetectLocalClick" HorizontalAlignment="Stretch"
+                                ToolTip.Tip="Add the subnet of an active local IPv4 interface"/>
+                    </StackPanel>
+                    <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                        <Grid ColumnDefinitions="*,12,*" RowDefinitions="Auto,Auto">
+                            <TextBlock Text="Threads" Classes="fieldlabel"/>
+                            <TextBlock Grid.Column="2" Text="Timeout (s)" Classes="fieldlabel" FontSize="11"/>
+                            <TextBox Grid.Row="1" x:Name="ThreadsTextBox" Text="50" AutomationProperties.Name="Concurrent threads"
+                                     ToolTip.Tip="Concurrent hosts: 1–256. SMB shares on one host use the same authenticated session."/>
+                            <TextBox Grid.Row="1" Grid.Column="2" x:Name="TimeoutTextBox" Text="3" AutomationProperties.Name="Timeout in seconds"
+                                     ToolTip.Tip="1–60 seconds per TCP attempt. SMB uses up to 3 initial attempts, then one final attempt for unconnected targets with at most 8 concurrent hosts. Active SMB operations allow at least 30 seconds without progress."/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16,0,0,0">
+                <Grid Classes="resultsheader" ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="3">
+                        <TextBlock Text="Scan results" FontSize="22" FontWeight="SemiBold"/>
+                        <TextBlock Text="Host discovery &amp; SMB access" Classes="caption resultsubtitle" FontSize="11"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button x:Name="ScanAliveBtn" Content="Host discovery" Click="OnScanAliveClick"/>
+                        <Button x:Name="ScanSmbBtn" Content="Scan SMB" Classes="primary" Click="OnScanSmbClick"/>
+                        <Button x:Name="StopBtn" Content="Stop" Classes="danger" Click="OnStopClick" IsEnabled="False"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Grid.Row="1" Classes="filterbar" ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBox x:Name="FilterTextBox" Watermark="Filter IP, hostname, share or status…"
+                             AutomationProperties.Name="Filter results" ToolTip.Tip="Filter results (Ctrl+F). Press Esc to clear."/>
+                    <Button Grid.Column="1" x:Name="ClearFilterBtn" Content="Clear" Classes="ghost" IsVisible="False"
+                            Click="OnClearFilterClick" Margin="4,0,0,0" ToolTip.Tip="Clear the results filter"/>
+                    <TextBlock Grid.Column="2" x:Name="FilterHintText" Classes="caption" Margin="12,0"/>
+                    <Button Grid.Column="3" x:Name="ExportResultsBtn" Content="Export…" Click="OnExportMenuClick"
+                            ToolTip.Tip="Export results or confirmed discovery targets">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Results (CSV)" Click="OnExportCsvClick"
+                                          ToolTip.Tip="All results in the selected tab, including filtered-out rows"/>
+                                <Separator/>
+                                <MenuItem x:Name="ExportAliveTxtMenu" Header="Alive IPs (TXT)" Click="OnExportAliveTxtClick"
+                                          ToolTip.Tip="Confirmed IPs from a completed discovery scan, one per line"/>
+                                <MenuItem x:Name="ExportAliveJsonMenu" Header="Alive IPs (JSON)" Click="OnExportAliveJsonClick"
+                                          ToolTip.Tip="Confirmed IPs from a completed discovery scan, as a JSON array"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </Grid>
+                <TextBlock Grid.Row="2" x:Name="StatsText" Classes="caption stats" FontSize="11" MinHeight="18"/>
+                <Border Grid.Row="3" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                        BorderThickness="1" CornerRadius="7" ClipToBounds="True">
+                    <Grid RowDefinitions="*,Auto">
+                        <Grid>
+                            <TabControl x:Name="ResultsTabControl" SelectionChanged="OnTabChanged">
+                                <TabControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></TabControl.ItemsPanel>
+                                <TabItem x:Name="AliveTab" Header="Discovery">
+                                    <DataGrid x:Name="AliveDataGrid"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="True"
+                                  ContextRequested="OnDataGridContextRequested"
+                                  DoubleTapped="OnAliveRowDoubleTapped"
+                                  LoadingRow="AliveDataGrid_LoadingRow">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Open \\host in file manager" Click="OnCtxOpenServerClick"/>
+                                    <Separator/>
+                                    <MenuItem Header="Copy IP address"  Click="OnCtxCopyIpClick"/>
+                                    <MenuItem Header="Copy hostname"     Click="OnCtxCopyHostnameClick"/>
+                                    <MenuItem Header="Copy MAC address"  Click="OnCtxCopyMacClick"/>
+                                    <Separator/>
+                                    <MenuItem Header="Move to SMB scan scope" Click="OnCtxScopeThisClick"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="IP Address"     Binding="{Binding IP}" SortMemberPath="IPSortKey"              Width="160" MinWidth="160"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="175"/>
+                                <DataGridTextColumn Header="Hostname"        Binding="{Binding Hostname}"         Width="185"/>
+                                <DataGridTextColumn Header="MAC Address"     Binding="{Binding MACAddress}"       Width="170"/>
+                                <DataGridTextColumn Header="Vendor"          Binding="{Binding MACVendor}"        Width="140"/>
+                                <DataGridTextColumn Header="Latency"         Binding="{Binding ICMPLatency}"      Width="105"/>
+                                <DataGridTextColumn Header="Open TCP Ports"  Binding="{Binding OpenPortsList}"    Width="175"/>
+                                <DataGridTextColumn Header="Detection" Binding="{Binding DetectionMethod}" Width="170"/>
+                                <DataGridTextColumn Header="Attempts" Binding="{Binding Attempts}" Width="75"/>
+                                <DataGridTextColumn Header="Diagnostics" Binding="{Binding Diagnostics}" Width="250"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                                </TabItem>
+                                <TabItem x:Name="SmbTab" Header="SMB shares">
+                                    <DataGrid x:Name="SmbDataGrid"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="True"
+                                  ContextRequested="OnDataGridContextRequested"
+                                  DoubleTapped="OnSmbRowDoubleTapped"
+                                  LoadingRow="SmbDataGrid_LoadingRow">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Open \\host in file manager" Click="OnCtxOpenServerClick"/>
+                                    <Separator/>
+                                    <MenuItem Header="Copy IP address"      Click="OnCtxCopyIpClick"/>
+                                    <MenuItem Header="Copy hostname"         Click="OnCtxCopyHostnameClick"/>
+                                    <MenuItem Header="Copy UNC path (\\host)" Click="OnCtxCopyUncHostClick"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+<DataGridTextColumn Header="IP Address"      Binding="{Binding IP}" SortMemberPath="IPSortKey"           Width="160" MinWidth="160"/>
+<DataGridTextColumn Header="Hostname"         Binding="{Binding Hostname}"      Width="145"/>
+<DataGridTextColumn Header="Auth / status"    Binding="{Binding SessionLabel}"  Width="165"/>
+<DataGridTemplateColumn Header="Shares &amp; access" Width="390">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ItemsControl ItemsSource="{Binding Shares}" Margin="8,5">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Classes="sharechip"
+                                                                Classes.rw="{Binding CanWrite}"
+                                                                Classes.ro="{Binding IsReadOnlyShare}"
+                                                                Margin="0,0,5,3"
+                                                                Cursor="Hand" Focusable="True" MaxWidth="350"
+                                                                AutomationProperties.Name="{Binding ChipText}"
+                                                                KeyDown="OnShareChipKeyDown"
+                                                                ToolTip.Tip="{Binding OpenHint}"
+                                                                DoubleTapped="OnShareChipDoubleTapped">
+                                                            <Border.ContextMenu>
+                                                                <ContextMenu>
+                                                                    <MenuItem Header="Open in file manager" IsEnabled="{Binding CanOpenInFileManager}" Click="OnShareOpenClick"/>
+                                                                    <MenuItem Header="Copy UNC path (\\host\share)" Click="OnShareCopyUncClick"/>
+                                                                    <MenuItem Header="Copy smb:// URL"              Click="OnShareCopySmbClick"/>
+                                                                </ContextMenu>
+                                                            </Border.ContextMenu>
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Access}" Margin="6,0,0,0"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+<DataGridTemplateColumn Header="Summary" SortMemberPath="SharesSummary" Width="160">
+    <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+            <TextBlock Text="{Binding SharesSummary}" ToolTip.Tip="{Binding SharesSummary}"
+                       TextTrimming="CharacterEllipsis" Margin="12,0" VerticalAlignment="Center"/>
+        </DataTemplate>
+    </DataGridTemplateColumn.CellTemplate>
+</DataGridTemplateColumn>
+<DataGridCheckBoxColumn Header="Admin share"  Binding="{Binding IsAdmin}" Width="135"/>
+<DataGridTextColumn Header="SMB Ver."         Binding="{Binding SMBVersion}"    Width="80"/>
+<DataGridTextColumn Header="OS / Version"     Binding="{Binding OSVersion}"     Width="190"/>
+<DataGridTextColumn Header="SNMP metadata" Binding="{Binding SNMPInfo}" Width="200"/>
+<DataGridTextColumn Header="Diagnostics"     Binding="{Binding Diagnostics}"         Width="280"/>
+</DataGrid.Columns>
+</DataGrid>
+                                </TabItem>
+                                <TabItem x:Name="UnreachableTab" Header="Unreachable" ToolTip.Tip="TCP port 445 could not be reached. This is not a host-alive test and does not prove that the machine is offline.">
+                                    <DataGrid x:Name="UnreachableDataGrid"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="True"
+                                  ContextRequested="OnDataGridContextRequested">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Copy IP address" Click="OnCtxCopyIpClick"/>
+                                    <MenuItem Header="Copy reason"     Click="OnCtxCopyErrorClick"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" SortMemberPath="IPSortKey"       Width="160" MinWidth="160"/>
+                                <DataGridTextColumn Header="Hostname"   Binding="{Binding Hostname}" Width="200"/>
+                                <DataGridTextColumn Header="Reason"     Binding="{Binding Diagnostics}"    Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                                </TabItem>
+                            </TabControl>
+                            <Border x:Name="EmptyState" IsHitTestVisible="False" Margin="24,90,24,12"
+                                    VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
+                                <StackPanel Spacing="10">
+                                    <Path Width="34" Height="34" Stretch="Uniform" Stroke="#62798E" StrokeThickness="1.2"
+                                          HorizontalAlignment="Center" Margin="0,0,0,4"
+                                          Data="M 3,3 L 27,3 L 27,21 L 3,21 Z M 10,28 L 20,28 M 15,21 L 15,28 M 8,9 L 12,9 M 8,14 L 21,14"/>
+                                    <TextBlock x:Name="EmptyTitleText" Text="No discovery results" FontSize="17" FontWeight="SemiBold" TextAlignment="Center"/>
+                                    <TextBlock x:Name="EmptyDescriptionText" Classes="caption" TextAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <Border Grid.Row="1" Classes="resulthelp" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+                            <TextBlock x:Name="ResultHelpText" Classes="caption" FontSize="11"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="4" Classes="activitypanel" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}"
+                        BorderThickness="1" CornerRadius="6">
+                    <Grid RowDefinitions="40,Auto">
+                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="12,0,5,0">
+                            <TextBlock Text="ACTIVITY LOG" Classes="eyebrow"/>
+                            <Button Grid.Column="1" Content="Clear" Classes="ghost" Click="OnClearLogClick" FontSize="11"/>
+                            <Button Grid.Column="2" x:Name="LogToggleBtn" Content="Show log" Classes="ghost" Click="OnLogToggleClick" FontSize="11"/>
+                        </Grid>
+                        <Border Grid.Row="1" x:Name="LogContent" IsVisible="False" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+                            <TextBox x:Name="LogTextBox" Classes="activity" IsReadOnly="True" IsUndoEnabled="False" AcceptsReturn="True" BorderThickness="0"
+                                     AutomationProperties.Name="Activity log" TextWrapping="NoWrap" Background="#101620" Foreground="#A6C1D4"
+                                     FontFamily="Cascadia Code, DejaVu Sans Mono, Consolas, monospace" FontSize="11" Padding="12,10"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="18,0">
+            <Grid ColumnDefinitions="*,20,150">
+                <TextBlock x:Name="StatusTextBlock" Text="Ready. Add a target scope to begin." FontSize="11"
+                           Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                <ProgressBar Grid.Column="2" x:Name="ScanProgressBar" MinWidth="0" Height="4" Minimum="0" Maximum="100"
+                             Foreground="{StaticResource AccentBrush}" Background="#2A3647" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Settings overlay keeps credentials in their original controls and never shrinks results. -->
+        <Border x:Name="SettingsDrawer" Grid.RowSpan="3" IsVisible="False" Background="#A6080C14" ZIndex="10">
+            <Grid ColumnDefinitions="*,440">
+                <Button Classes="backdrop" Click="OnSettingsCloseClick" Focusable="False"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" AutomationProperties.Name="Close settings"/>
+                <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" BorderBrush="#435269" BorderThickness="1,0,0,0"
+                        KeyboardNavigation.TabNavigation="Cycle">
+                    <Grid RowDefinitions="82,*,64">
+                        <Grid ColumnDefinitions="*,Auto" Margin="24,0">
+                            <StackPanel VerticalAlignment="Center" Spacing="4">
+                                <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold"/>
+                                <TextBlock Text="Authentication &amp; scan preferences" Classes="caption"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Close" Classes="ghost" Click="OnSettingsCloseClick" VerticalAlignment="Center" ToolTip.Tip="Close settings (Esc)"/>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="24,8,24,24">
+                                <TextBlock Text="SMB authentication" Classes="sectiontitle"/>
+                                <TextBlock Text="Use these credentials for SMB scans and Dolphin on Linux. Windows Explorer uses your Windows session." Classes="caption" Margin="0,0,0,18"/>
+                                <TextBlock Text="Domain / workgroup" Classes="fieldlabel"/>
+                                <TextBox x:Name="SmbDomainTextBox" Watermark="Leave blank for a local account" AutomationProperties.Name="SMB domain or workgroup" Margin="0,0,0,14"/>
+                                <TextBlock Text="Username" Classes="fieldlabel"/>
+                                <TextBox x:Name="SmbUserTextBox" Watermark="Leave blank for a guest attempt" AutomationProperties.Name="SMB username" Margin="0,0,0,14"/>
+                                <TextBlock Text="Password / NTLM hash" Classes="fieldlabel"/>
+                                <TextBox x:Name="SmbPassTextBox" PasswordChar="•" Watermark="Password or 32-character hash" AutomationProperties.Name="SMB password or NTLM hash" Margin="0,0,0,6"/>
+                                <CheckBox x:Name="UseHashCheckBox" Content="Use an NTLM hash"/>
+                                <TextBlock Text="Hash mode applies to scans. Dolphin requires a password or a saved session." Classes="caption" FontSize="11" Margin="0,4,0,0"/>
+                                <Separator Margin="0,24"/>
+                                <TextBlock Text="SMB inspection" Classes="sectiontitle"/>
+                                <TextBlock Text="Share inspection checks read access and creates then removes a temporary file to check write access." Classes="caption" FontSize="11" Margin="0,0,0,10"/>
+                                <CheckBox x:Name="PortScanOnlyCheckBox" Content="Check port 445 only · no authentication"/>
+                                <CheckBox x:Name="SmbHostnamesCheckBox" Content="Resolve hostnames after SMB inspection"
+                                          ToolTip.Tip="Look up reachable addresses through the system name resolver after the share check."
+                                          IsEnabled="{Binding !IsChecked, ElementName=PortScanOnlyCheckBox}"/>
+                                <CheckBox x:Name="EnableWMICheckBox" Content="Query WMI system information"/>
+                                <CheckBox x:Name="EnableSNMPCheckBox" Content="Query SNMP device information"/>
+                                <TextBlock Text="SNMP community" Classes="fieldlabel" Margin="0,12,0,7"/>
+                                <TextBox x:Name="SNMPCommunityTextBox" Text="public" Watermark="public" AutomationProperties.Name="SNMP community"/>
+                                <Button Content="Export SMB report (JSON)" Click="OnExportSmbReportClick" HorizontalAlignment="Stretch" Margin="0,12,0,0"
+                                        ToolTip.Tip="All checked IPs, shares, connection attempts and errors. Credentials are not included."/>
+                                <Separator Margin="0,24"/>
+                                <TextBlock Text="Host discovery" Classes="sectiontitle"/>
+                                <TextBlock Text="Maximum attempts" Classes="fieldlabel"/>
+                                <NumericUpDown x:Name="DiscoveryAttempts" Minimum="1" Maximum="3" Value="2" Increment="1"
+                                               AutomationProperties.Name="Maximum discovery attempts" ToolTip.Tip="Retry unresolved addresses. More attempts take longer."/>
+                                <CheckBox x:Name="ShowAllDiscoveryCheckBox" Content="Show all checked IP addresses"
+                                          IsCheckedChanged="OnDiscoveryVisibilityChanged" Margin="0,8,0,0"/>
+                                <TextBlock Text="By default, only confirmed hosts are shown. Include all addresses to inspect unanswered probes and errors." Classes="caption" FontSize="11" Margin="0,6,0,0"/>
+                                <Separator Margin="0,24"/>
+                                <TextBlock Text="Reports" Classes="sectiontitle"/>
+                                <Button Content="Export discovery report (JSON)" Click="OnExportDiscoveryReportClick" HorizontalAlignment="Stretch"/>
+                                <TextBlock Text="Includes all checked addresses, probe outcomes and diagnostics." Classes="caption" FontSize="11" Margin="0,10,0,0"/>
+                                <TextBlock Text="Last activity" Classes="fieldlabel" Margin="0,20,0,7"/>
+                                <TextBlock Text="{Binding Text, ElementName=StatusTextBlock}" Classes="caption"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <Border Grid.Row="2" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Esc to close" Classes="caption" FontSize="11"/>
+                                <Button Grid.Column="1" Content="Done" Classes="primary" Click="OnSettingsCloseClick" MinWidth="80"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
