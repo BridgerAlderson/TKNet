@@ -21,8 +21,17 @@ public static class EngineCache
             {
                 using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write)) resource.CopyTo(file);
                 if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-                try { File.Move(temporary, destination, overwrite: true); }
-                catch (IOException) when (Matches(destination, hash)) { /* Another instance published identical bytes. */ }
+                // Another process may have finished while we copied. Only replace a damaged entry.
+                var existing = new FileInfo(destination);
+                bool repair = existing.Exists || existing.LinkTarget != null;
+                if (!repair || !Matches(destination, hash))
+                {
+                    try { File.Move(temporary, destination, overwrite: repair); }
+                    catch (Exception error) when ((error is IOException or UnauthorizedAccessException) && Matches(destination, hash))
+                    {
+                        // The winner installed the expected bytes before our move completed.
+                    }
+                }
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }
@@ -32,8 +41,9 @@ public static class EngineCache
 
     private static bool Matches(string path, string hash)
     {
-        if (!File.Exists(path) || new FileInfo(path).LinkTarget != null) return false;
-        using var file = File.OpenRead(path);
+        var entry = new FileInfo(path);
+        if (!entry.Exists || entry.Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
         return Convert.ToHexString(SHA256.HashData(file)) == hash;
     }
 }

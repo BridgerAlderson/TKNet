@@ -118,7 +118,7 @@ func fixtureSharePage(names []string, total, resume, status uint32) []byte {
 		for i, name := range names {
 			fixtureNDRText(&b, name)
 			if i%2 == 0 {
-				fixtureNDRText(&b, "Departman — açıklama")
+				fixtureNDRText(&b, "Notes for Łódź staff")
 			}
 		}
 	}

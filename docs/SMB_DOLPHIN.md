@@ -1,20 +1,24 @@
-# SMB paylaşımlarını Dolphin ile açma
+# Opening SMB shares in Dolphin
 
-## Geçerli akış
+On Linux, enter the account under **Settings** in **SMB authentication**. Double-click a disk share in the **SMB shares** tab or choose **Open in file manager** from the share's context menu. Opening a host takes you to the server root. Opening a share takes you to its directory.
 
-1. SMB taraması, ayarlardaki kullanıcı, domain ve parolayı motorun standart girişine gönderir. Motor bunları SMB oturumu için kullanır. Guest sonucu, sağlanan hesapla erişimin kanıtı sayılmaz.
-2. Linux'ta paylaşım/host çift tıklaması veya **Open** eylemi, o andaki ayarlardan kimlik bilgilerini alır. Paylaşım ve sunucu kökü için `smb://[DOMAIN;]user[:password]@host/share` biçimi korunur; bileşenler ayrı ayrı URL kodlanır.
-3. Parola içeren bağlantı, `DolphinSmbLauncher` üzerinden doğrudan Dolphin pencere arayüzünün `openDirectories` metoduna gönderilir. Açık ve yanıt veren pencere varsa kullanılır. Yoksa `dolphin --new-window file:///...` ile yerel klasörde başlatılır; TKNet, D-Bus bağlantısının PID bilgisini ve çalışan dosyanın sistemde kurulu Dolphin ile aynı aygıt/inode kimliğine sahip olduğunu doğrular. Paylaşım, pencere hazır olduğunda doğrulanan benzersiz bağlantıya bir kez aktarılır.
-4. Günlük ve durum satırı yalnız paylaşım yolunu gösterir. Panoya kopyalanan SMB URL'si kimlik bilgisi içermez. TKNet'in başlattığı süreçte parola argümanı yoktur. Kimlik bilgileri elbette TKNet/Dolphin belleğinde ve yerel oturum iletişiminde bulunur; Dolphin/KIO'nun kendi oturum, geçmiş ve cüzdan davranışlarını TKNet yönetmez.
-5. Başarılı D-Bus yanıtı yalnız açma isteğinin teslim edildiği anlamına gelir. Sunucuya bağlanma ve kimlik doğrulama sonucu Dolphin/KIO tarafından gösterilir. TKNet teslimatı “paylaşıma erişim doğrulandı” diye sunmaz.
-6. Dolphin veya oturum iletişimi kullanılamazsa hata gösterilir. Kullanıcı bilgisi olan bir açma isteği, bilgileri atılarak sessizce başka dosya yöneticisine aktarılmaz. Başlatma/aktarım beklemesi sınırlıdır ve uygulama kapanırken iptal edilir.
+| Credentials at the time of opening | File manager behavior |
+| --- | --- |
+| Username and password | TKNet sends the current account, optional domain, and password to Dolphin through the desktop session bus. |
+| Username with NTLM hash mode enabled | TKNet supplies the username and optional domain. Dolphin can use a saved session or prompt for a password. The hash stays with the scanner. |
+| No username | TKNet opens the location using the desktop file manager's session. |
+| Windows | Explorer uses the current Windows session. |
 
-Kullanıcı adı yoksa mevcut Dolphin/varsayılan dosya yöneticisi davranışı korunur. Hash modunda hash hiçbir zaman Dolphin'e parola olarak aktarılmaz; kullanıcı/domain gönderilir, parola veya kayıtlı Dolphin oturumu gerekir. Windows'ta Explorer mevcut Windows oturumunu kullanır.
+Authenticated opening requires a system installation of Dolphin, KIO SMB support, and a running desktop session bus. If the handoff fails, TKNet displays the error.
 
-## Erişim reddi
+## How the handoff works
 
-Tarayıcı, oturum açıldıktan sonra paylaşım izni reddedildiğinde aynı hesapla tekrar giriş yapmaz. Dolphin'e yapılan her açma isteği ayrı bir kullanıcı eylemidir. Sunucunun döndürdüğü erişim veya kimlik doğrulama hatasını Dolphin/KIO gösterir. Hesap kilitleme ilkesi sunucuda ya da etki alanında uygulanır.
+TKNet encodes the server, share, and account into a location Dolphin can open. It reuses a responsive Dolphin window or starts one in a local directory. Before delivering the SMB location, it checks the identity of the executable behind the D-Bus connection against the installed Dolphin executable. It sends one `openDirectories` request to the verified window. The startup wait has a timeout and ends when the application closes. [Dolphin window interface](https://github.com/KDE/dolphin/blob/master/src/dolphinmainwindow.h)
 
-## Kullanılan arayüzler
+Only the network path appears in TKNet's log, status text, and clipboard links. When TKNet starts Dolphin, its command line contains a local directory. The credential-bearing location travels in memory on the desktop bus. Dolphin and KIO manage their own session history and credential storage.
 
-Pencere yolu, servis adı ve yöntem, Dolphin'in kendi [pencere arayüzü](https://github.com/KDE/dolphin/blob/master/src/dolphinmainwindow.h) ve [pencere bulma/açma uygulaması](https://github.com/KDE/dolphin/blob/master/src/global.cpp) ile karşılaştırıldı. Genel `FileManager1.ShowFolders` yolu, Dolphin kapalıyken URL'yi yeni süreç argümanlarına aktarabildiği için kimlik bilgili açılışta kullanılmadı.
+## Interpreting access errors
+
+A successful D-Bus reply means Dolphin received the location. Dolphin and KIO then contact the server and display the result. A share can appear in the inventory even when the account cannot open its root.
+
+The scanner sends its credentials to the engine over standard input. Within an authenticated SMB session, denial of a share permission does not trigger a new login with the configured account. Opening a location in Dolphin is a separate user action. The server or domain controls account lockout policy. [Reading SMB scan results](SMB_REPORT_REVIEW.md)

@@ -1,27 +1,64 @@
-# Keşif kabul testleri
+# Evaluating host discovery
 
-## Test senaryoları
+Use a known inventory to measure which devices a discovery scan finds and which addresses it incorrectly marks as live. The comparison tool reads saved reports offline. A reference inventory should record device state independently, for example from a console or a management system.
 
-| Senaryo | Doğrulama | Sonuç |
-|---|---|---|
-| İlk ICMP yanıtı kayıp | Sahte prob ilk denemede sessiz, ikinci denemede geçerli echo | İkinci denemede Confirmed |
-| İlk TCP bağlantısı zaman aşımı | Sahte prob ilk denemede timeout, ikinci denemede başarılı bağlantı | İkinci denemede Confirmed |
-| İlk NetBIOS yanıtı kayıp | Sahte prob ilk denemede timeout, ikinci denemede geçerli yanıt | İkinci denemede Confirmed |
-| Aynı ARP eşlemesi ve bağlantı reddi tekrar ediyor | İki deneme boyunca yalnız belirsiz bulgular | IsAlive=false; açık port listesine eklenmez |
-| Yerel araç tamamen çalışmıyor | Tek etkin yöntemde araç hatası | Incomplete; gereksiz yeniden deneme yok |
-| Tekrardan önce iptal | Backoff sırasında context iptali | Sonraki deneme çalışmaz |
-| Çok sayıda host ve port | 12 sahte host × 3 port, ortak sınır 2 | En fazla 2 eşzamanlı prob, hepsi tamamlanır |
-| Ethernet/Wi-Fi aynı subnette | Sentetik arayüzler ve seçilen kaynak adresi | Doğru kaynak adresinin arayüzü seçilir |
-| VPN yerel subnet rotasının önüne geçiyor | Sentetik tun arayüzü ve rota/kaynak verisi | Ethernet'e ARP uygulanmaz |
-| Yönlendirici arkasındaki ağ, network/broadcast, kapalı arayüz | Rota ve arayüz birim testleri | Yerel ARP arayüzü seçilmez |
-| Host yanıt vermiyor | Sahte ping ile headless motor ve üç hedef | Üç negatif kayıt da son olaydan önce iletilir |
-| Arayüz negatif kaydı alıyor | İzole sahte motor alt süreci | No response ve Incomplete kayıtları korunur |
-| Ölçüm dosyası eksik/çelişkili | Python değerlendirme testleri | Başarı puanı üretmek yerine hata |
-| Linux loopback ICMP ve yerel TCP | Güncel motor, `127.0.0.1` ve geçici TCP dinleyicisi | İlk denemede Confirmed; loopback rotasında ARP atlanır |
+## Compare a scan with an inventory
 
-Paket kaybı ve rota seçimi senaryoları kontrollü test verileri kullanır. Fiziksel ağdaki başarı, aynı kapsamdaki cihazların bağımsız olarak doğrulanan durumlarıyla ölçülür.
+1. Record the addresses, their known state, the time of observation, and the network connection used. Keep the scope and device state consistent across tools. Repeat the measurements if conditions change.
+2. Complete a TKNet discovery scan. Under **Settings**, choose **Export discovery report (JSON)**. This report includes checks that received no response.
+3. Save the reference inventory as `reports/truth.json`. This example uses documentation addresses.
 
-## Testleri yeniden çalıştırma
+```json
+{
+  "Source": "Lab console",
+  "ObservedAt": "2026-10-08T12:00:00Z",
+  "Scenario": "Wired management network",
+  "Hosts": [
+    {"IP": "192.0.2.10", "Alive": true},
+    {"IP": "192.0.2.11", "Alive": false}
+  ]
+}
+```
+
+Save TKNet's discovery report as `reports/tknet-report.json` and run the comparison from the repository root.
+
+```sh
+python3 tools/discovery_compare.py \
+  --truth reports/truth.json \
+  --report TKNet=reports/tknet-report.json \
+  --output reports/comparison.json
+```
+
+To compare a second tool, add another `--report Label=file.json`. For a tool with a different export format, map its fields to `Completed: true` and a `Results` array with a string `IP` and a boolean `IsAlive` for each checked address.
+
+For a saved Nmap XML report, supply the exact input scope from that run as an array of IPv4 strings. Nmap can omit silent addresses from its XML host records. The comparison tool checks the XML completion status, total host count, and consistency of the listed hosts before scoring. [Nmap XML format](https://nmap.org/book/output-formats-xml-output.html)
+
+```sh
+python3 tools/discovery_compare.py \
+  --truth reports/truth.json \
+  --report TKNet=reports/tknet-report.json \
+  --nmap reports/recorded-nmap.xml \
+  --nmap-scope reports/recorded-nmap-scope.json \
+  --output reports/nmap-comparison.json
+```
+
+## Interpret the scores
+
+`FalsePositiveIPs` lists known offline addresses reported as live. `FalseNegativeIPs` lists known live addresses that did not receive confirmation. Precision is the fraction of predicted live addresses that were actually live. Recall is the fraction of known live addresses that the tool found.
+
+Scores use only addresses with an independent label. Other scanned addresses appear under `UnlabelledIPs`. A metric with an empty denominator is `null`. An incomplete scan, duplicate entries, or a reference address missing from the scan causes a validation error.
+
+## Regression coverage
+
+| Scenario | Expected behavior |
+| --- | --- |
+| Lost ICMP or NetBIOS reply, or an initial TCP timeout | A valid reply on the second attempt confirms the address. |
+| Repeated ARP mapping or TCP refusal | The record stays unconfirmed. A refused connection contributes no open port. |
+| Local tool fails, or the user stops discovery during a retry delay | The record includes the error, or cancellation ends the pending retry. |
+| Multiple hosts and ports share a probe limit | Concurrency stays within the limit and each outstanding check finishes. |
+| Ethernet and Wi-Fi share a subnet, or the route changes to a VPN | Local ARP follows the selected interface. Routed targets, unsuitable links, and network or broadcast addresses are excluded from the local ARP check. |
+| All targets are silent | The engine sends every checked record before completion. The UI retains incomplete and unanswered results. |
+| Linux loopback | A local ICMP reply or a successful connection to a temporary listener confirms the address. ARP is skipped on loopback. |
 
 ```sh
 go test -race -count=1 ./...
@@ -30,55 +67,4 @@ dotnet run --project tests/TKNetUI.Tests/TKNetUI.Tests.csproj
 python3 -m unittest discover -s tests/discovery -v
 ```
 
-## Gerçek başarıyı ölçme
-
-1. Aynı kabul kapsamındaki her IP'nin açık/kapalı durumunu cihaz konsolu, laboratuvar güç durumu veya bağımsız yönetim sistemi üzerinden doğrulayın. DNS, ping veya başka bir tarayıcı çıktısını tek başına ground truth olarak kullanmayın.
-2. Her araç için aynı kapsamı, ağ bağlantısını ve cihaz durumunu koruyun. Paket kaybı gibi değişken koşullarda testleri tekrarlayın; gözlem zamanlarını kaydedin.
-3. TKNet taramasını tamamlayıp **Export discovery evidence (JSON)** kullanın. Aktif IP listesinden ibaret bir dosya, eksik sonuç ve taranmamış adres ayrımını koruyamaz.
-4. Doğrulanan gerçek durumu aşağıdaki şemayla kaydedin. Örnek IP'ler belgeleme adresleridir, gerçek ölçüm değildir.
-
-```json
-{
-  "Source": "Lab konsolundan bağımsız durum doğrulaması",
-  "ObservedAt": "2026-10-08T12:00:00+03:00",
-  "Scenario": "Ethernet / Wi-Fi / VPN: kullanılan gerçek koşulu yazın",
-  "Hosts": [
-    {"IP": "192.0.2.10", "Alive": true},
-    {"IP": "192.0.2.11", "Alive": false}
-  ]
-}
-```
-
-Mevcut raporları ağ trafiği üretmeden karşılaştırın:
-
-```sh
-python3 tools/discovery_compare.py \
-  --truth reports/truth.json \
-  --report TKNet=reports/tknet-report.json \
-  --output reports/comparison.json
-```
-
-Birden fazla kaydedilmiş TKNet/normalize edilmiş rapor `--report Etiket=dosya.json` ile eklenebilir. Normalize edilmiş raporda `Completed=true` ve her kontrol edilen IP için `Results` dizisinde `IP`/`IsAlive` boolean alanları bulunmalıdır. SoftPerfect'in bilinmeyen CSV sütunları otomatik tahmin edilmez; eldeki gerçek dışa aktarım biçimi bu şemaya doğru şekilde dönüştürülmelidir.
-
-Nmap XML için ayrıca o taramada kullanılan tam IPv4 kapsamını bir JSON dizi dosyasında verin (örneğin `["192.0.2.10", "192.0.2.11"]`):
-
-```sh
-python3 tools/discovery_compare.py \
-  --truth reports/truth.json \
-  --report TKNet=reports/tknet-report.json \
-  --nmap reports/recorded-nmap.xml \
-  --nmap-scope reports/recorded-nmap-scope.json \
-  --output reports/comparison.json
-```
-
-Araç yalnız mevcut dosyaları okur. XML'in başarıyla tamamlanma bilgisi, toplam hedef sayısı ve aktif host kayıtlarının tutarlılığı denetlenir. XML alanları için temel: [Nmap resmi XML çıktı belgesi](https://nmap.org/book/output-formats-xml-output.html). Verilen kapsamın gerçekten o taramaya ait olduğunu kullanıcı doğrulamalıdır; toplam sayının eşitliği tek başına bunu kanıtlamaz.
-
-Çıktıda yanlış pozitif IP'ler, kaçırılan açık IP'ler, precision ve recall ayrı gösterilir. Değerlendirilen adresler arasında raporun aktif sınıflandırdığı IP yoksa precision `null` olur; bu sıfır yanlış pozitif iddiasından yüzde yüz başarı üretmeyi önler. Bağımsız doğrulamada açık cihaz yoksa recall `null` olur. Gerçek durumu bilinmeyen IP'ler otomatik olarak kapalı sayılmaz. Eksik kapsam ve yarım raporlar ölçüm olarak reddedilir.
-
-## Açık sınırlar
-
-- Tamamen sessiz bir açık cihazın kapalı cihazdan kesin ayrılması mümkün değildir; belirsizliği `IsAlive=true` yaparak gizlemiyoruz.
-- Bir geçit/proxy hedef adına IP yanıtı verebilir. Mevcut doğrulama, fiziksel cihaz kimliğinin kriptografik kanıtı değildir.
-- Mevcut ürün IPv4 içindir. IPv6 desteği eklenmedi.
-- Yerel ARP, farklı VLAN/VPN üzerinden yönlendirilmiş cihazların fiziksel adresini belirleyemez.
-- Daha çok deneme kayıp yanıtları telafi edebilir; filtrelenmiş bütün trafiği yanıtlı hale getirmez.
+The retry and routing fixtures use controlled responses and synthetic interfaces. On a physical network, filtering can keep a live device silent for every attempt and a proxy can reply on a device's behalf. Evaluate each Ethernet, Wi-Fi, or VPN path against the inventory observed on that path.

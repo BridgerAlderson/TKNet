@@ -1,12 +1,41 @@
 # Contributing to TKNet
 
-TKNet ships an Avalonia desktop application with an embedded Go engine. Start with
-the build instructions in [README](README.md) and the architecture described there.
+TKNet ships an Avalonia desktop application with an embedded Go engine. To build
+a distributable package, follow the [build instructions](README.md#build-and-run).
 
 Keep changes focused and describe the observable problem, the resulting behavior,
-and the checks you ran. Run `bash tools/check.sh` on Linux after restoring the three
-.NET projects. Use `./build.sh` or `build.bat` to validate a distributable package.
-GitHub Actions also checks the Windows batch build on Windows.
+and the checks you ran.
+
+## Build and test
+
+Use the Go version in `go.mod` and a .NET SDK supported by `global.json`.
+The Linux test suite also builds the older Fyne UI. On Ubuntu or Debian it needs
+`libgl1-mesa-dev`, `xorg-dev`, `libxkbcommon-dev` and `libfontconfig1`.
+
+```sh
+go mod download
+dotnet restore TKNetUI/TKNetUI.csproj
+dotnet restore tests/TKNetUI.Tests/TKNetUI.Tests.csproj
+dotnet restore tests/TKNetUI.VisualChecks/TKNetUI.VisualChecks.csproj
+bash tools/check.sh
+```
+
+The script runs the Go race detector and vet, the desktop logic and layout tests,
+and the offline report and packaging tests. The build scripts accept `GO_BIN`
+and `DOTNET_BIN` when a toolchain is installed outside the standard search path.
+The Windows checks are listed in the [CI workflow](.github/workflows/quality.yml).
+
+For SMB changes, `python3 tools/test_smb_loopback.py` exercises pagination,
+partial results and write-check cleanup against a local SMB2 fixture. It
+requires Python with Impacket and permission to open a loopback socket.
+For Dolphin changes, run the private D-Bus test on Linux.
+
+```sh
+dotnet run --project tests/TKNetUI.Tests/TKNetUI.Tests.csproj --no-restore -- --dolphin-dbus
+```
+
+With Dolphin installed, `--dolphin-native` additionally tests window startup
+and reuse using a temporary local directory.
 
 ## Compatibility requirements
 

@@ -9,7 +9,7 @@
 - Export completed discovery targets as IP-only TXT or JSON from the Export menu;
   sort numerically, remove duplicates and preserve the selected scan while saving.
   TXT is UTF-8 without a BOM, with one address per line for Nmap input lists.
-- Professional desktop workspace with a collapsible scope panel, scrollable settings,
+- Desktop workspace with a collapsible scope panel, scrollable settings,
   share access chips, empty states and activity log.
 - Sonar application icon in the header, desktop window and Windows executable.
 - Numeric IPv4 sorting, complete-address column widths, metadata filtering and
@@ -19,6 +19,9 @@
 
 ### Reliability and packaging
 
+- Handle simultaneous starts against the same engine cache on Windows. A second
+  publisher verifies and reuses the installed engine. A damaged cache entry can
+  still be repaired.
 - Build the desktop and tests with .NET 10 LTS and require Go 1.27.4 or later.
 - Verify the Dolphin process and address its unique desktop-bus connection before delivering an SMB URL.
 - Record distinct read and write check outcomes. A denied root listing leaves write access untested.
@@ -58,7 +61,6 @@
   credential-preserving Dolphin handoff, cancellation and engine protocol failures.
 - Isolated engine builds, validated publish output, shared build locks and rollback
   protection for existing release packages.
-- Go 1.27.2 toolchain and patched Go network dependencies.
 - MIT license, bundled third-party notices, contributor guidance, issue templates,
   Dependabot configuration and Linux/Windows quality workflows.
 

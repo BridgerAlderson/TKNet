@@ -282,9 +282,43 @@ try
     Assert(File.ReadAllBytes(path).SequenceEqual(bytes), "engine cache has wrong bytes");
     File.WriteAllText(path, "truncated");
     Assert(Publish() == path && File.ReadAllBytes(path).SequenceEqual(bytes), "corrupt engine cache was trusted");
+    // Finish a competing publication while the other publisher is still copying.
+    var winnerTime = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    foreach (bool repair in new[] { false, true })
+    {
+        File.Delete(path);
+        if (repair) File.WriteAllText(path, "damaged engine");
+        using var contender = new PublishDuringCopyStream(bytes, () =>
+        {
+            Publish();
+            File.SetLastWriteTimeUtc(path, winnerTime);
+        });
+        Assert(EngineCache.Publish(contender, cacheDirectory, "engine") == path
+            && File.GetLastWriteTimeUtc(path) == winnerTime && File.ReadAllBytes(path).SequenceEqual(bytes),
+            "a concurrent publisher replaced an already verified engine");
+    }
     File.Delete(path);
     var concurrentPaths = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(Publish)));
     Assert(concurrentPaths.All(p => p == path) && File.ReadAllBytes(path).SequenceEqual(bytes), "concurrent cache extraction corrupted engine");
+    if (OperatingSystem.IsWindows())
+    {
+        File.WriteAllText(path, "damaged engine");
+        using (File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            bool lockedFileRejected = false;
+            try { Publish(); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { lockedFileRejected = true; }
+            Assert(lockedFileRejected, "a locked engine with the wrong digest was accepted");
+        }
+        Assert(Publish() == path && File.ReadAllBytes(path).SequenceEqual(bytes), "cache repair failed after the reader released the file");
+    }
+    File.Delete(path);
+    Directory.CreateDirectory(path);
+    bool invalidDestinationRejected = false;
+    try { Publish(); }
+    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { invalidDestinationRejected = true; }
+    Assert(invalidDestinationRejected && Directory.Exists(path), "an unusable cache destination was accepted");
+    Directory.Delete(path);
     Assert(Directory.GetFiles(cacheDirectory, "*.tmp", SearchOption.AllDirectories).Length == 0, "temporary engine files leaked");
     string engineName = OperatingSystem.IsWindows() ? "tknet-engine.exe" : "tknet-engine";
     string parentEngine = Path.Combine(cacheDirectory, engineName);
@@ -294,6 +328,9 @@ try
     string adjacentEngine = Path.Combine(applicationDirectory, engineName);
     if (OperatingSystem.IsLinux())
     {
+        File.CreateSymbolicLink(path, parentEngine);
+        Assert(Publish() == path && new FileInfo(path).LinkTarget == null
+            && File.ReadAllBytes(parentEngine).SequenceEqual(bytes), "a matching engine outside the cache was trusted through a link");
         File.CreateSymbolicLink(adjacentEngine, parentEngine);
         Assert(EngineClient.FindAdjacentEngine(applicationDirectory) == null, "an external engine symlink was selected");
         File.Delete(adjacentEngine);
@@ -387,3 +424,12 @@ if (OperatingSystem.IsLinux())
 Console.WriteLine($"PASS: {assertions} UI scope/engine assertions");
 if (args.Contains("--dolphin-dbus")) await DolphinDbusChecks.RunAsync();
 if (args.Contains("--dolphin-native")) await DolphinNativeCheck.RunAsync();
+
+sealed class PublishDuringCopyStream(byte[] bytes, Action publish) : MemoryStream(bytes)
+{
+    public override void CopyTo(Stream destination, int bufferSize)
+    {
+        base.CopyTo(destination, bufferSize);
+        publish();
+    }
+}

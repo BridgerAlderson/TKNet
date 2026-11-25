@@ -15,7 +15,7 @@ packs (`dotnet restore TKNetUI/TKNetUI.csproj -r linux-x64`, then `-r win-x64`),
 download the Go dependencies, and run:
 
 ```sh
-python3 tools/third_party_notices.py --nuget-root /path/to/nuget/packages --runtime-version 8.0.31
+python3 tools/third_party_notices.py --nuget-root /path/to/nuget/packages --runtime-version 10.0.15
 ```
 
 Use the runtime version actually selected by your SDK. Review the regenerated
