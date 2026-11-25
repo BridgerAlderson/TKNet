@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	fyne.io/fyne/v2 v2.7.4
 	github.com/cloudsoda/go-smb2 v0.0.0-20260609183447-7b96c35f5f4b
-	github.com/gosnmp/gosnmp v1.43.2
+	github.com/gosnmp/gosnmp v1.47.0
 	github.com/yusufpapurcu/wmi v1.2.4
 )
 
